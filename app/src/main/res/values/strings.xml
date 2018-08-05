@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BluetoothWorkAPP</string>
+    <string name="start_search">Начать поиск</string>
+    <string name="start_control">Перейти к управлению</string>
+</resources>
