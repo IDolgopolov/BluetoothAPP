@@ -24,6 +24,7 @@ public class ActivityControl extends AppCompatActivity {
     private final String GO_FORWARD =  "1";
     private final String STAY =  "0";
     private final String GO_BACK = "2";
+    private String angle = "90"; //0, 30, 60, 90, 120, 150, 180
     private ConnectedThread threadCommand;
 
 
@@ -80,17 +81,21 @@ public class ActivityControl extends AppCompatActivity {
 
         private void calculateAndSendCommand(float x, float y) {
             int quarter = identifyQuarter(x, y);
+            int speed = speedCalculation(centerBDCheight - y);
+            String angle = angleCalculation(x);
+
             String resultDown = "x: "+ Float.toString(x) + " y: " + Float.toString(y)
                     + " qr: " + Integer.toString(quarter) + "\n"
-                    + "height: " + centerBDCheight + " width: " + centerBDCwidth;
+                    + "height: " + centerBDCheight + " width: " + centerBDCwidth + "\n"
+                    + "speed: " + Integer.toString(speed) + " angle: " + angle;
             viewResultTouch.setText(resultDown);
-            int speed = speedCalculation(centerBDCheight - y);
+
             if(speed > 0) {
-                threadCommand.sendCommand(Integer.toString(speed), GO_FORWARD);
+                threadCommand.sendCommand(Integer.toString(speed), GO_FORWARD, angle);
             } else if (speed < 0) {
-                threadCommand.sendCommand(Integer.toString(speed), GO_BACK);
+                threadCommand.sendCommand(Integer.toString(speed), GO_BACK, angle);
             } else {
-                threadCommand.sendCommand(Integer.toString(speed), STAY);
+                threadCommand.sendCommand(Integer.toString(speed), STAY, angle);
             }
         }
 
@@ -110,7 +115,28 @@ public class ActivityControl extends AppCompatActivity {
         private int speedCalculation(float deviation) {
             float coefficient = 255/(BDCheight/2);
             int speed = Math.round(deviation * coefficient);
+            if(speed > 255 ) speed = 255;
+            if(speed < - 255) speed = -255;
             return speed;
+        }
+
+        private String angleCalculation(float x) {
+            if(x < BDCwidth/6) {
+                angle = "0";
+            } else if (x > BDCwidth/6 && x < BDCwidth/3) {
+                angle = "30";
+            } else if (x > BDCwidth/3 && x < BDCwidth/2) {
+                angle = "60";
+            } else if (x > BDCwidth/2 && x < BDCwidth/3*2) {
+                angle = "120";
+            } else if (x > BDCwidth/3*2 && x < BDCwidth/6*5) {
+                angle = "150";
+            } else if (x > BDCwidth/6*5 && x < BDCwidth) {
+                angle = "180";
+            } else {
+                angle = "90";
+            }
+            return angle;
         }
 
     }
@@ -132,12 +158,14 @@ public class ActivityControl extends AppCompatActivity {
 
         }
 
-        public void sendCommand(String command, String direction) {
+        public void sendCommand(String command, String direction, String angle) {
             byte[] commandArray = command.getBytes();
             byte[] directionArray = direction.getBytes();
+            byte[] angleArray = angle.getBytes();
             try {
                 outputStream.write(commandArray);
                 outputStream.write(directionArray);
+                outputStream.write(angleArray);
             } catch(Exception e) {}
         }
 

@@ -62,19 +62,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /*Button buttonSendCommand = (Button) findViewById(R.id.send_email);
-        buttonSendCommand.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                try {
-                    OutputStream stream = clientSocket.getOutputStream();
-                    byte value = 3;
-                    stream.write(new byte[] {value});
-                } catch(Exception e) {
-                    e.getStackTrace();
-                }
-            }
-        }); */
     }
 
     private boolean permissionGranted() {
