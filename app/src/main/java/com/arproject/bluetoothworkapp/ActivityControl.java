@@ -180,6 +180,7 @@ public class ActivityControl extends AppCompatActivity {
 
         public void run() {
 
+
         }
 
         public void sendCommand(String speed, String angle) {
