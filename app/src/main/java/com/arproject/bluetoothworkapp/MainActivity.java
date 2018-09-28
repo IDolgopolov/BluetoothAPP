@@ -51,8 +51,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         buttonStartControl = (Button) findViewById(R.id.button_start_control);
-        //включить НЕ ЗАБУДЬ
-        //buttonStartControl.setClickable(false);
+        buttonStartControl.setClickable(false);
         buttonStartControl.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

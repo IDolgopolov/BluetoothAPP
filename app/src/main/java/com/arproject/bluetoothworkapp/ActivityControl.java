@@ -15,17 +15,17 @@ import android.widget.TextView;
 import com.example.bluetoothapp.R;
 
 import java.io.OutputStream;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class ActivityControl extends AppCompatActivity {
     private Button buttonDriveControl;
     private float BDCheight, BDCwidth;
     private float centerBDCheight, centerBDCwidth;
     private TextView viewResultTouch;
-    private final String GO_FORWARD =  "1";
-    private final String STAY =  "0";
-    private final String GO_BACK = "2";
     private String angle = "90"; //0, 30, 60, 90, 120, 150, 180
     private ConnectedThread threadCommand;
+    private long lastTimeSendCommand = System.currentTimeMillis();
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -60,18 +60,41 @@ public class ActivityControl extends AppCompatActivity {
 
 
     public class ControlDriveInputListener implements View.OnTouchListener {
+        private Timer timer;
 
         @Override
         public boolean onTouch(View view, MotionEvent motionEvent) {
-            float x = motionEvent.getX();
-            float y = motionEvent.getY();
+            final float x = motionEvent.getX();
+            final float y = motionEvent.getY();
 
             switch(motionEvent.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    calculateAndSendCommand(x, y);
+                    timer = new Timer();
+                    timer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                                calculateAndSendCommand(x, y);
+                        }
+                    }, 0, 10);
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    calculateAndSendCommand(x, y);
+                    if(timer != null) {
+                        timer.cancel();
+                        timer = null;
+                    }
+                    timer = new Timer();
+                    timer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            calculateAndSendCommand(x, y);
+                        }
+                    }, 0, 10);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if(timer != null) {
+                        timer.cancel();
+                        timer = null;
+                    }
                     break;
             }
 
@@ -88,14 +111,11 @@ public class ActivityControl extends AppCompatActivity {
                     + " qr: " + Integer.toString(quarter) + "\n"
                     + "height: " + centerBDCheight + " width: " + centerBDCwidth + "\n"
                     + "speed: " + Integer.toString(speed) + " angle: " + angle;
-            viewResultTouch.setText(resultDown);
+            //viewResultTouch.setText(resultDown);
 
-            if(speed > 0) {
-                threadCommand.sendCommand(Integer.toString(speed), GO_FORWARD, angle);
-            } else if (speed < 0) {
-                threadCommand.sendCommand(Integer.toString(speed), GO_BACK, angle);
-            } else {
-                threadCommand.sendCommand(Integer.toString(speed), STAY, angle);
+            if((System.currentTimeMillis() - lastTimeSendCommand) > 100) {
+                threadCommand.sendCommand(Integer.toString(speed), angle);
+                lastTimeSendCommand = System.currentTimeMillis();
             }
         }
 
@@ -115,6 +135,10 @@ public class ActivityControl extends AppCompatActivity {
         private int speedCalculation(float deviation) {
             float coefficient = 255/(BDCheight/2);
             int speed = Math.round(deviation * coefficient);
+            if(speed > 0 && speed < 70) speed = 0;
+            if(speed < 0 && speed > - 70)  speed = 0;
+            if(speed < 120 && speed > 70) speed = 120;
+            if(speed > -120 && speed < -70) speed = -120;
             if(speed > 255 ) speed = 255;
             if(speed < - 255) speed = -255;
             return speed;
@@ -158,14 +182,21 @@ public class ActivityControl extends AppCompatActivity {
 
         }
 
-        public void sendCommand(String command, String direction, String angle) {
-            byte[] commandArray = command.getBytes();
-            byte[] directionArray = direction.getBytes();
+        public void sendCommand(String speed, String angle) {
+            byte[] speedArray = speed.getBytes();
             byte[] angleArray = angle.getBytes();
+            String a = "#";
+            String b = "@";
+            String c = "*";
+
             try {
-                outputStream.write(commandArray);
-                outputStream.write(directionArray);
+                outputStream.write(b.getBytes());
+                outputStream.write(speedArray);
+                outputStream.write(a.getBytes());
+
+                outputStream.write(c.getBytes());
                 outputStream.write(angleArray);
+                outputStream.write(a.getBytes());
             } catch(Exception e) {}
         }
 
