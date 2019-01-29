@@ -4,6 +4,8 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothSocket;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -26,6 +28,11 @@ public class ActivityControl extends AppCompatActivity {
     private String angle = "90"; //0, 30, 60, 90, 120, 150, 180
     private ConnectedThread threadCommand;
     private long lastTimeSendCommand = System.currentTimeMillis();
+    private Button bLowHit, bHighHit;
+    private Handler handler;
+    private static final String LOW_HIT = "/8/";
+    private static final String HIGH_HIT = "/9/";
+
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -34,28 +41,49 @@ public class ActivityControl extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_control);
 
-        viewResultTouch = (TextView) findViewById(R.id.view_result_touch);
+        threadCommand = new ConnectedThread(MainActivity.clientSocket);
+        threadCommand.run();
 
-        buttonDriveControl = (Button) findViewById(R.id.button_drive_control);
+        buttonDriveControl = findViewById(R.id.button_drive_control);
         final ViewTreeObserver vto = buttonDriveControl.getViewTreeObserver();
         vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
                 BDCheight = buttonDriveControl.getHeight();
-                Log.i("button", BDCheight + "");
                 BDCwidth = buttonDriveControl.getWidth();
                 centerBDCheight = BDCheight/2;
                 centerBDCwidth = BDCwidth/2;
                 buttonDriveControl.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-
             }
 
         });
 
+        bHighHit = findViewById(R.id.b_high_hit);
+        bHighHit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                threadCommand.sendHit(HIGH_HIT);
+            }
+        });
+        bLowHit = findViewById(R.id.b_low_hit);
+        bLowHit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                threadCommand.sendHit(HIGH_HIT);
+            }
+        });
+        viewResultTouch = findViewById(R.id.view_result_touch);
+        viewResultTouch.setText("null");
+
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                viewResultTouch.setText(msg.obj.toString());
+            }
+        };
+
         buttonDriveControl.setOnTouchListener(new ControlDriveInputListener());
 
-        threadCommand = new ConnectedThread(MainActivity.clientSocket);
-        threadCommand.run();
     }
 
 
@@ -111,7 +139,7 @@ public class ActivityControl extends AppCompatActivity {
                     + " qr: " + Integer.toString(quarter) + "\n"
                     + "height: " + centerBDCheight + " width: " + centerBDCwidth + "\n"
                     + "speed: " + Integer.toString(speed) + " angle: " + angle;
-            //viewResultTouch.setText(resultDown);
+            handler.sendMessage(handler.obtainMessage(1, resultDown));
 
             if((System.currentTimeMillis() - lastTimeSendCommand) > 100) {
                 threadCommand.sendCommand(Integer.toString(speed), angle);
@@ -199,6 +227,13 @@ public class ActivityControl extends AppCompatActivity {
                 outputStream.write(angleArray);
                 outputStream.write(a.getBytes());
             } catch(Exception e) {}
+        }
+
+        public void sendHit(String hit) {
+            byte[] bHit = hit.getBytes();
+            try {
+                outputStream.write(bHit);
+            }catch (Exception e) {e.printStackTrace(); }
         }
 
     }

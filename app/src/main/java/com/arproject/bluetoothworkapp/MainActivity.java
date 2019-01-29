@@ -10,6 +10,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -46,18 +47,6 @@ public class MainActivity extends AppCompatActivity {
                        findArduino();
                      }
                 }
-            }
-        });
-
-
-        buttonStartControl = (Button) findViewById(R.id.button_start_control);
-        buttonStartControl.setClickable(false);
-        buttonStartControl.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                    Intent intent = new Intent();
-                    intent.setClass(getApplicationContext(), ActivityControl.class);
-                    startActivity(intent);
             }
         });
 
@@ -99,21 +88,29 @@ public class MainActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                String itemMAC =  listView.getItemAtPosition(i).toString().split("/", 2)[0];
-                BluetoothDevice connectDevice = bluetoothAdapter.getRemoteDevice(itemMAC);
-                try {
-                    Method m = connectDevice.getClass().getMethod(
-                            "createRfcommSocket", new Class[]{int.class});
+                final String itemMAC =  listView.getItemAtPosition(i).toString().split("/", 2)[0];
 
-                    clientSocket = (BluetoothSocket) m.invoke(connectDevice, 1);
-                    clientSocket.connect();
-                    if(clientSocket.isConnected()) {
-                        buttonStartControl.setClickable(true);
-                        bluetoothAdapter.cancelDiscovery();
+                new Thread() {
+                    @Override
+                    public void run() {
+                        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(itemMAC);
+                        try {
+                            BluetoothSocket socket = device.createRfcommSocketToServiceRecord(device.getUuids()[0].getUuid());
+                            socket.connect();
+                            if(socket.isConnected()) {
+                                Log.e("eee", "socket get");
+                                clientSocket = socket;
+                                Intent intent = new Intent();
+                                intent.setClass(getApplicationContext(), ActivityControl.class);
+                                startActivity(intent);
+                            }
+                        } catch (Exception e) {e.printStackTrace(); }
                     }
-                } catch(Exception e) {
-                    e.getStackTrace();
-                }
+
+
+
+                }.start();
+
             }
         });
     }
